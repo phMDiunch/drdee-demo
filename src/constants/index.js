@@ -43,3 +43,10 @@ export const GENDERS = ["Nam", "Nữ", "Khác"];
 export const EMPLOYMENT_STATUSES = ["Đang làm việc", "Thử việc", "Nghỉ việc"];
 
 export const CONTRACT_TYPES = ["Thử việc", "Chính thức", "Thời vụ"];
+
+// Thêm vào file src/constants/index.js
+export const CLINIC_PREFIXES = [
+  { label: "Minh Khai", value: "MK" },
+  { label: "Tôn Đức Thắng", value: "TDT" },
+  { label: "Đà Nẵng", value: "DN" },
+];
