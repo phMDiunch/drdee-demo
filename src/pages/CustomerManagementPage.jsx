@@ -18,6 +18,7 @@ import {
 import { toast } from "react-toastify";
 import dayjs from "dayjs";
 import { Timestamp } from "firebase/firestore";
+import { Link } from "react-router-dom";
 import {
   getCustomers,
   addCustomerWithAutoCode,
@@ -145,7 +146,15 @@ const CustomerManagementPage = () => {
       width: 150,
       fixed: "left",
     },
-    { title: "Họ và tên", dataIndex: "fullName", key: "fullName", width: 200 },
+    {
+      title: "Họ và tên",
+      dataIndex: "fullName",
+      key: "fullName",
+      width: 200,
+      render: (text, record) => (
+        <Link to={`/customers/${record.id}`}>{text}</Link>
+      ),
+    },
     { title: "Số điện thoại", dataIndex: "phone", key: "phone", width: 120 },
     { title: "Giới tính", dataIndex: "gender", key: "gender", width: 100 },
     { title: "Nguồn", dataIndex: "source", key: "source", width: 150 },

@@ -9,6 +9,7 @@ import {
   addDoc,
   updateDoc,
   deleteDoc,
+  getDoc,
 } from "firebase/firestore";
 
 const customerCollectionRef = collection(db, "customers");
@@ -98,5 +99,17 @@ export const addCustomerWithAutoCode = async (customerData) => {
   } catch (e) {
     console.error("Transaction thất bại: ", e);
     throw new Error("Không thể tạo khách hàng. Vui lòng thử lại.");
+  }
+};
+
+export const getCustomerById = async (id) => {
+  const customerDoc = doc(db, "customers", id);
+  const docSnap = await getDoc(customerDoc);
+
+  if (docSnap.exists()) {
+    return { id: docSnap.id, ...docSnap.data() };
+  } else {
+    console.log("Không tìm thấy document với ID:", id);
+    return null;
   }
 };
