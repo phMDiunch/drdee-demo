@@ -36,6 +36,11 @@ const CustomerDetailPage = () => {
   const [editingPlan, setEditingPlan] = useState(null);
 
   const handleAddPlan = () => {
+    setEditingPlan(null);
+    setIsPlanModalVisible(true);
+  };
+  const handleEditPlan = (plan) => {
+    setEditingPlan(plan);
     setIsPlanModalVisible(true);
   };
 
@@ -46,15 +51,15 @@ const CustomerDetailPage = () => {
 
   const handleSavePlan = async (values) => {
     const cleanedValues = cleanDataForFirestore(values);
-
+    console.log("Cleaned Values:", cleanedValues);
     const planData = {
       ...cleanedValues,
       planDate: Timestamp.now(),
       customerId: customerId,
       customerName: customer.fullName,
-      amountPaid: editingPlan ? editingPlan.amountPaid : 0,
-      debt:
-        cleanedValues.totalAmount - (editingPlan ? editingPlan.amountPaid : 0),
+      // amountPaid: editingPlan ? editingPlan.amountPaid : 0,
+      // debt:
+      //   cleanedValues.totalAmount - (editingPlan ? editingPlan.amountPaid : 0),
       treatmentStatus: "Chưa điều trị",
       updatedAt: Timestamp.now(),
     };
@@ -84,6 +89,7 @@ const CustomerDetailPage = () => {
       const customerData = await getCustomerById(customerId);
       setCustomer(customerData);
       const plansData = await getPlansByCustomerId(customerId);
+      console.log("Plans Data:", plansData);
       setPlans(plansData);
     } catch (error) {
       toast.error("Lỗi khi tải dữ liệu chi tiết khách hàng.");
@@ -95,6 +101,33 @@ const CustomerDetailPage = () => {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  const serviceDetailColumns = [
+    { title: "Tên dịch vụ", dataIndex: "name", key: "name" },
+    {
+      title: "Đơn giá gốc",
+      dataIndex: "price",
+      key: "price",
+      render: (val) => `${new Intl.NumberFormat("vi-VN").format(val || 0)} đ`,
+    },
+    { title: "SL", dataIndex: "quantity", key: "quantity", align: "center" },
+    {
+      title: "Giá ưu đãi",
+      dataIndex: "preferentialPrice",
+      key: "preferentialPrice",
+      render: (val) => `${new Intl.NumberFormat("vi-VN").format(val || 0)} đ`,
+    },
+    {
+      title: "Thành tiền",
+      dataIndex: "finalPrice",
+      key: "finalPrice",
+      render: (val) => (
+        <Text strong>{`${new Intl.NumberFormat("vi-VN").format(
+          val || 0
+        )} đ`}</Text>
+      ),
+    },
+  ];
 
   const planColumns = [
     {
@@ -109,27 +142,34 @@ const CustomerDetailPage = () => {
       key: "totalAmount",
       render: (amount) => new Intl.NumberFormat("vi-VN").format(amount) + " đ",
     },
-    {
-      title: "Đã trả",
-      dataIndex: "amountPaid",
-      key: "amountPaid",
-      render: (amount) => new Intl.NumberFormat("vi-VN").format(amount) + " đ",
-    },
-    {
-      title: "Còn nợ",
-      dataIndex: "debt",
-      key: "debt",
-      render: (amount) => (
-        <Text type="danger">
-          {new Intl.NumberFormat("vi-VN").format(amount) + " đ"}
-        </Text>
-      ),
-    },
+    // {
+    //   title: "Đã trả",
+    //   dataIndex: "amountPaid",
+    //   key: "amountPaid",
+    //   render: (amount) => new Intl.NumberFormat("vi-VN").format(amount) + " đ",
+    // },
+    // {
+    //   title: "Còn nợ",
+    //   dataIndex: "debt",
+    //   key: "debt",
+    //   render: (amount) => (
+    //     <Text type="danger">
+    //       {new Intl.NumberFormat("vi-VN").format(amount) + " đ"}
+    //     </Text>
+    //   ),
+    // },
     {
       title: "Trạng thái",
       dataIndex: "status",
       key: "status",
       render: (status) => <Tag color="blue">{status}</Tag>,
+    },
+    {
+      title: "Hành động",
+      key: "action",
+      render: (_, record) => (
+        <a onClick={() => handleEditPlan(record)}>Xem/Sửa</a>
+      ),
     },
   ];
 
@@ -186,7 +226,24 @@ const CustomerDetailPage = () => {
         >
           + Thêm Kế hoạch Điều trị mới
         </Button>
-        <Table columns={planColumns} dataSource={plans} rowKey="id" />
+        <Table
+          columns={planColumns}
+          dataSource={plans}
+          rowKey="id"
+          expandable={{
+            expandedRowRender: (record) => (
+              <Table
+                columns={serviceDetailColumns}
+                dataSource={record.services}
+                rowKey={(item) => item.serviceId || Math.random()}
+                pagination={false}
+              />
+            ),
+            // Chỉ hiển thị nút + nếu plan có dịch vụ
+            rowExpandable: (record) =>
+              record.services && record.services.length > 0,
+          }}
+        />
       </Card>
       {isPlanModalVisible && (
         <TreatmentPlanForm
