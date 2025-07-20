@@ -29,6 +29,32 @@ export const getCustomers = async (clinicId = null) => {
   return querySnapshot.docs.map((doc) => ({ ...doc.data(), id: doc.id }));
 };
 
+export const getCustomersThisMonth = async (clinicId = null) => {
+  // 1. Tính toán ngày đầu và ngày cuối của tháng hiện tại
+  const now = new Date();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const startOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+
+  // 2. Tạo một mảng chứa các điều kiện query
+  // Mặc định sẽ lọc theo ngày tạo trong tháng này
+  const queryConstraints = [
+    where("createdAt", ">=", startOfMonth),
+    where("createdAt", "<", startOfNextMonth),
+  ];
+
+  // 3. Nếu có clinicId, thêm điều kiện lọc theo clinicId
+  if (clinicId) {
+    queryConstraints.push(where("clinicId", "==", clinicId));
+  }
+
+  // 4. Xây dựng câu query cuối cùng với tất cả các điều kiện
+  const q = query(customerCollectionRef, ...queryConstraints);
+
+  // 5. Thực thi query và trả về kết quả
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.docs.map((doc) => ({ ...doc.data(), id: doc.id }));
+};
+
 /**
  * Cập nhật thông tin khách hàng.
  * @param {string} id - ID của khách hàng cần cập nhật.

@@ -167,7 +167,12 @@ export const TREATMENT_STATUSES = [
   "Hoàn thành",
 ];
 
-export const PAYMENT_METHODS = ["Tiền mặt", "Chuyển khoản", "Thẻ"];
+export const PAYMENT_METHODS = [
+  "Tiền mặt",
+  "Chuyển khoản",
+  "Quẹt thẻ thường",
+  "Quẹt thẻ Visa",
+];
 
 export const PAYMENT_STATUSES = [
   "Chưa thanh toán",

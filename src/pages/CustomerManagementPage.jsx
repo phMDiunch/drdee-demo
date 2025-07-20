@@ -21,6 +21,7 @@ import { Timestamp } from "firebase/firestore";
 import { Link } from "react-router-dom";
 import {
   getCustomers,
+  getCustomersThisMonth,
   addCustomerWithAutoCode,
   updateCustomer,
   deleteCustomer,
@@ -42,7 +43,7 @@ const CustomerManagementPage = () => {
   const fetchCustomers = async () => {
     setLoading(true);
     try {
-      const data = await getCustomers();
+      const data = await getCustomersThisMonth();
       setAllCustomers(data);
       setFilteredCustomers(data);
     } catch (error) {

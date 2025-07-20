@@ -29,6 +29,8 @@ import {
 } from "../constants";
 import ToothSelectionModal from "./ToothSelectionModal";
 
+import { useDataStore } from '../stores/dataStore';
+
 const { Option, OptGroup } = Select;
 const { Text } = Typography;
 
@@ -40,20 +42,28 @@ const TreatmentPlanForm = ({ visible, onSave, onCancel, initialValues }) => {
   const [isToothModalVisible, setIsToothModalVisible] = useState(false);
   const [currentServiceIndex, setCurrentServiceIndex] = useState(null);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      const services = await getServices();
-      const employees = await getEmployees();
-      setServicesList(services);
-      setDoctorsList(
-        employees.filter((e) => e.position?.toLowerCase().includes("bác sĩ"))
-      );
-      setSalesList(
-        employees.filter((e) => e.role === "sale" || e.role === "employee")
-      ); // Điều chỉnh role sale nếu cần
-    };
-    fetchData();
-  }, []);
+  const { services, doctors } = useDataStore((state) => ({
+    services: state.services,
+    doctors: state.doctors,
+  }));
+
+  console.log("Services:", services);
+  console.log("Doctors:", doctors);
+
+  // useEffect(() => {
+  //   const fetchData = async () => {
+  //     const services = await getServices();
+  //     const employees = await getEmployees();
+  //     setServicesList(services);
+  //     setDoctorsList(
+  //       employees.filter((e) => e.position?.toLowerCase().includes("bác sĩ"))
+  //     );
+  //     setSalesList(
+  //       employees.filter((e) => e.role === "sale" || e.role === "employee")
+  //     ); // Điều chỉnh role sale nếu cần
+  //   };
+  //   fetchData();
+  // }, []);
 
   const groupedServices = useMemo(() => {
     return servicesList.reduce((acc, service) => {
@@ -104,12 +114,12 @@ const TreatmentPlanForm = ({ visible, onSave, onCancel, initialValues }) => {
       };
       const valuesToSet = initialValues
         ? {
-            ...initialValues,
-            planDate:
-              initialValues.planDate && !dayjs.isDayjs(initialValues.planDate)
-                ? dayjs(initialValues.planDate.toDate())
-                : dayjs(),
-          }
+          ...initialValues,
+          planDate:
+            initialValues.planDate && !dayjs.isDayjs(initialValues.planDate)
+              ? dayjs(initialValues.planDate.toDate())
+              : dayjs(),
+        }
         : defaultValues;
 
       form.setFieldsValue(valuesToSet);

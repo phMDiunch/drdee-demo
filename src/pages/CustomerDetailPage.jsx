@@ -1,190 +1,201 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { useParams, Link } from "react-router-dom";
-import {
-  Typography,
-  Breadcrumb,
-  Descriptions,
-  Spin,
-  Card,
-  Button,
-  Table,
-  Tag,
-} from "antd";
-import { toast } from "react-toastify";
-import dayjs from "dayjs";
+import React, { useState, useEffect, useCallback } from 'react';
+import { useParams, Link } from 'react-router-dom';
+import { Typography, Breadcrumb, Descriptions, Spin, Card, Button, Table, Tag, Space, Popconfirm } from 'antd';
+import { toast } from 'react-toastify';
+import dayjs from 'dayjs';
+import { Timestamp } from 'firebase/firestore';
 
-import TreatmentPlanForm from "../components/TreatmentPlanForm";
-import { Timestamp } from "firebase/firestore";
+// Service imports
+import { getCustomerById } from '../services/customerService';
+import { getConsultedServicesByCustomerId, updateConsultedService, addConsultedService } from '../services/consultedService';
+import { addPayment } from '../services/paymentService';
+import { cleanDataForFirestore } from '../utils';
 
-import { getCustomerById } from "../services/customerService";
-import {
-  getPlansByCustomerId,
-  addPlan,
-  updatePlan,
-} from "../services/treatmentPlanService";
-import { cleanDataForFirestore } from "../utils";
+// Component imports
+import ConsultedServiceForm from '../components/ConsultedServiceForm';
+import PaymentForm from '../components/PaymentForm';
+
 
 const { Title, Text } = Typography;
 
 const CustomerDetailPage = () => {
   const { customerId } = useParams();
   const [customer, setCustomer] = useState(null);
-  const [plans, setPlans] = useState([]);
+  const [consultedServices, setConsultedServices] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const [isPlanModalVisible, setIsPlanModalVisible] = useState(false);
-  const [editingPlan, setEditingPlan] = useState(null);
+  // State cho modal 
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [editingService, setEditingService] = useState(null);
+  const [isViewMode, setIsViewMode] = useState(false);
 
-  const handleAddPlan = () => {
-    setEditingPlan(null);
-    setIsPlanModalVisible(true);
-  };
-  const handleEditPlan = (plan) => {
-    setEditingPlan(plan);
-    setIsPlanModalVisible(true);
-  };
-
-  const handleCancelPlanModal = () => {
-    setIsPlanModalVisible(false);
-    // setEditingPlan(null);
-  };
-
-  const handleSavePlan = async (values) => {
-    const cleanedValues = cleanDataForFirestore(values);
-    console.log("Cleaned Values:", cleanedValues);
-    const planData = {
-      ...cleanedValues,
-      planDate: Timestamp.now(),
-      customerId: customerId,
-      customerName: customer.fullName,
-      // amountPaid: editingPlan ? editingPlan.amountPaid : 0,
-      // debt:
-      //   cleanedValues.totalAmount - (editingPlan ? editingPlan.amountPaid : 0),
-      treatmentStatus: "Chưa điều trị",
-      updatedAt: Timestamp.now(),
-    };
-
-    try {
-      if (editingPlan) {
-        // Logic sửa
-        await updatePlan(editingPlan.id, planData);
-        toast.success("Cập nhật kế hoạch thành công!");
-      } else {
-        // Logic thêm mới
-        planData.createdAt = Timestamp.now();
-        await addPlan(planData);
-        toast.success("Tạo kế hoạch thành công!");
-      }
-      setIsPlanModalVisible(false);
-      loadData(); // Tải lại danh sách kế hoạch
-    } catch (error) {
-      console.error("Lỗi khi lưu kế hoạch:", error);
-      toast.error("Lỗi khi lưu kế hoạch.");
-    }
-  };
+  const [isPaymentModalVisible, setIsPaymentModalVisible] = useState(false);
 
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
       const customerData = await getCustomerById(customerId);
       setCustomer(customerData);
-      const plansData = await getPlansByCustomerId(customerId);
-      console.log("Plans Data:", plansData);
-      setPlans(plansData);
+      if (customerData) {
+        const servicesData = await getConsultedServicesByCustomerId(customerId);
+        setConsultedServices(servicesData);
+      }
     } catch (error) {
-      toast.error("Lỗi khi tải dữ liệu chi tiết khách hàng.");
+      toast.error("Lỗi khi tải dữ liệu.");
     } finally {
       setLoading(false);
     }
   }, [customerId]);
 
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
+  useEffect(() => { loadData(); }, [loadData]);
 
-  const serviceDetailColumns = [
-    { title: "Tên dịch vụ", dataIndex: "name", key: "name" },
-    {
-      title: "Đơn giá gốc",
-      dataIndex: "price",
-      key: "price",
-      render: (val) => `${new Intl.NumberFormat("vi-VN").format(val || 0)} đ`,
-    },
-    { title: "SL", dataIndex: "quantity", key: "quantity", align: "center" },
-    {
-      title: "Giá ưu đãi",
-      dataIndex: "preferentialPrice",
-      key: "preferentialPrice",
-      render: (val) => `${new Intl.NumberFormat("vi-VN").format(val || 0)} đ`,
-    },
-    {
-      title: "Thành tiền",
-      dataIndex: "finalPrice",
-      key: "finalPrice",
-      render: (val) => (
-        <Text strong>{`${new Intl.NumberFormat("vi-VN").format(
-          val || 0
-        )} đ`}</Text>
-      ),
-    },
-  ];
+  // Xử lý khi nhấn nút "Sửa" hoặc "Xem"
+  const handleEditOrViewService = (service) => {
+    setEditingService(service);
+    // Nếu dịch vụ đã chốt, bật chế độ chỉ xem
+    setIsViewMode(service.serviceStatus === 'Đã chốt');
+    setIsModalVisible(true);
+  };
 
-  const planColumns = [
+  const handleAddNewService = () => {
+    setEditingService(null);
+    setIsViewMode(false);
+    setIsModalVisible(true);
+  };
+
+  const handleCancelModal = () => {
+    setIsModalVisible(false);
+    setEditingService(null);
+    setIsViewMode(false);
+  };
+
+  // Hàm lưu dữ liệu từ form
+  const handleSaveService = async (values) => {
+    const cleanedValues = cleanDataForFirestore(values);
+    const serviceData = {
+      ...cleanedValues,
+      consultationDate: Timestamp.fromDate(cleanedValues.consultationDate.toDate()),
+      customerId: customerId,
+      updatedAt: Timestamp.now(),
+    };
+
+    try {
+      if (editingService) {
+        await updateConsultedService(editingService.id, serviceData);
+        toast.success("Cập nhật dịch vụ thành công!");
+      } else {
+        serviceData.createdAt = Timestamp.now();
+        serviceData.serviceStatus = "Chưa chốt"; // Mặc định khi mới tạo
+        await addConsultedService(serviceData);
+        toast.success("Thêm dịch vụ tư vấn thành công!");
+      }
+      setIsModalVisible(false);
+      loadData();
+    } catch (error) {
+      console.error("Lỗi khi lưu dịch vụ:", error);
+      toast.error("Thao tác thất bại.");
+    }
+  };
+
+  // Hàm để "chốt" một dịch vụ
+  const handleConfirmService = async (serviceId) => {
+    try {
+      await updateConsultedService(serviceId, {
+        serviceStatus: "Đã chốt",
+        serviceConfirmDate: Timestamp.now(),
+      });
+      toast.success("Chốt dịch vụ thành công!");
+      loadData();
+    } catch (error) {
+      toast.error("Lỗi khi chốt dịch vụ.");
+    }
+  };
+
+  const handleOpenPaymentModal = () => {
+    setIsPaymentModalVisible(true);
+  };
+
+  const handleSavePayment = async (paymentDataFromForm) => {
+    try {
+      // GỌI HÀM DỌN DẸP DỮ LIỆU
+      const cleanedPaymentData = cleanDataForFirestore(paymentDataFromForm);
+
+      const finalPaymentData = {
+        ...cleanedPaymentData,
+        paymentDate: Timestamp.fromDate(cleanedPaymentData.paymentDate.toDate()),
+        customerId: customerId,
+        cashierId: "ID_CUA_LE_TAN_DANG_NHAP",
+      };
+
+      console.log("Dữ liệu Phiếu thu chuẩn bị lưu:", finalPaymentData);
+      await addPayment(finalPaymentData);
+
+      toast.success("Tạo phiếu thu thành công!");
+      setIsPaymentModalVisible(false);
+      loadData();
+    } catch (error) {
+      console.error("Lỗi khi tạo phiếu thu:", error);
+      toast.error(error.message);
+    }
+  };
+
+  const columns = [
+    { title: 'Ngày Tư vấn', dataIndex: 'consultationDate', render: (date) => date ? dayjs(date.toDate()).format('DD/MM/YYYY') : '' },
+    { title: 'Tên Dịch vụ', dataIndex: ['denormalized', 'tenDichVu'], key: 'name' }, // Giả sử dữ liệu sao chép nằm trong object denormalized
+    { title: 'Thành tiền', dataIndex: 'finalPrice', render: (val) => new Intl.NumberFormat('vi-VN').format(val || 0) + ' đ' },
     {
-      title: "Ngày tạo",
-      dataIndex: "planDate",
-      key: "planDate",
-      render: (date) => (date ? dayjs(date.toDate()).format("DD/MM/YYYY") : ""),
+      title: 'Trạng thái DV',
+      dataIndex: 'serviceStatus',
+      render: (status) => <Tag color={status === 'Đã chốt' ? 'green' : 'orange'}>{status}</Tag>,
+      // Thêm bộ lọc cho cột này
+      filters: [{ text: 'Chưa chốt', value: 'Chưa chốt' }, { text: 'Đã chốt', value: 'Đã chốt' }],
+      onFilter: (value, record) => record.serviceStatus.indexOf(value) === 0,
+    },
+
+    {
+      title: 'Đã trả',
+      dataIndex: 'amountPaid',
+      render: (val) => <Text color="green">{new Intl.NumberFormat('vi-VN').format(val || 0)} đ</Text>
+    },
+
+    {
+      title: 'Còn nợ',
+      key: 'debt',
+      render: (_, record) => {
+        const debt = (record.finalPrice || 0) - (record.amountPaid || 0);
+        return <Text type="danger">{new Intl.NumberFormat('vi-VN').format(debt)} đ</Text>
+      }
     },
     {
-      title: "Tổng tiền",
-      dataIndex: "totalAmount",
-      key: "totalAmount",
-      render: (amount) => new Intl.NumberFormat("vi-VN").format(amount) + " đ",
-    },
-    // {
-    //   title: "Đã trả",
-    //   dataIndex: "amountPaid",
-    //   key: "amountPaid",
-    //   render: (amount) => new Intl.NumberFormat("vi-VN").format(amount) + " đ",
-    // },
-    // {
-    //   title: "Còn nợ",
-    //   dataIndex: "debt",
-    //   key: "debt",
-    //   render: (amount) => (
-    //     <Text type="danger">
-    //       {new Intl.NumberFormat("vi-VN").format(amount) + " đ"}
-    //     </Text>
-    //   ),
-    // },
-    {
-      title: "Trạng thái",
-      dataIndex: "status",
-      key: "status",
-      render: (status) => <Tag color="blue">{status}</Tag>,
+      title: 'Trạng thái Điều trị',
+      dataIndex: 'treatmentStatus',
+      render: (status) => <Tag color="blue">{status}</Tag>
     },
     {
-      title: "Hành động",
-      key: "action",
+      title: 'Hành động',
+      key: 'action',
       render: (_, record) => (
-        <a onClick={() => handleEditPlan(record)}>Xem/Sửa</a>
-      ),
-    },
+        <Space>
+          {record.serviceStatus === 'Đã chốt' ? (
+            <Button size="small" onClick={() => handleEditOrViewService(record)}>Xem</Button>
+          ) : (
+            <>
+              <Button size="small" onClick={() => handleEditOrViewService(record)}>Sửa</Button>
+              <Popconfirm title="Chắc chắn chốt dịch vụ này?" onConfirm={() => handleConfirmService(record.id)} okText="Chốt" cancelText="Hủy">
+                <Button size="small" type="primary">Chốt</Button>
+              </Popconfirm>
+            </>
+          )}
+        </Space>
+      )
+    }
   ];
 
-  if (loading) {
-    return (
-      <Spin size="large" style={{ display: "block", marginTop: "50px" }} />
-    );
-  }
-
-  if (!customer) {
-    return <Title level={3}>Không tìm thấy khách hàng.</Title>;
-  }
+  if (loading) return <Spin size="large" />;
 
   return (
-    <div style={{ padding: "24px" }}>
+    <div style={{ padding: '24px' }}>
+      {/* ... Breadcrumb, Title, Card Thông tin cá nhân giữ nguyên ... */}
       <Breadcrumb
         items={[
           { title: <Link to="/customers">Quản lý Khách hàng</Link> },
@@ -218,40 +229,33 @@ const CustomerDetailPage = () => {
         </Descriptions>
       </Card>
 
-      <Card title="Các Kế hoạch Điều trị">
-        <Button
-          type="primary"
-          style={{ marginBottom: 16 }}
-          onClick={handleAddPlan}
-        >
-          + Thêm Kế hoạch Điều trị mới
-        </Button>
-        <Table
-          columns={planColumns}
-          dataSource={plans}
-          rowKey="id"
-          expandable={{
-            expandedRowRender: (record) => (
-              <Table
-                columns={serviceDetailColumns}
-                dataSource={record.services}
-                rowKey={(item) => item.serviceId || Math.random()}
-                pagination={false}
-              />
-            ),
-            // Chỉ hiển thị nút + nếu plan có dịch vụ
-            rowExpandable: (record) =>
-              record.services && record.services.length > 0,
-          }}
-        />
+      <Card title="Lịch sử Dịch vụ & Điều trị">
+        <Space>
+          <Button type="primary" onClick={handleAddNewService}>+ Thêm Dịch vụ Tư vấn</Button>
+          <Button onClick={handleOpenPaymentModal}>+ Tạo Phiếu thu</Button>
+        </Space>
+
+        <Table columns={columns} dataSource={consultedServices} rowKey="id" />
+
       </Card>
-      {isPlanModalVisible && (
-        <TreatmentPlanForm
-          visible={isPlanModalVisible}
-          onSave={handleSavePlan}
-          onCancel={handleCancelPlanModal}
+
+      {isModalVisible && (
+        <ConsultedServiceForm
+          visible={isModalVisible}
+          onSave={handleSaveService}
+          onCancel={handleCancelModal}
+          initialValues={editingService}
+          isViewMode={isViewMode}
+        />
+      )}
+      {isPaymentModalVisible && (
+        <PaymentForm
+          visible={isPaymentModalVisible}
+          onSave={handleSavePayment}
+          onCancel={() => setIsPaymentModalVisible(false)}
           customer={customer}
-          initialValues={editingPlan}
+          // Chỉ đưa các dịch vụ đã chốt và còn nợ vào form
+          servicesToPay={consultedServices.filter(s => s.serviceStatus === 'Đã chốt' && (s.finalPrice || 0) > (s.amountPaid || 0))}
         />
       )}
     </div>

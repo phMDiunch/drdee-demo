@@ -26,9 +26,10 @@ import {
   deleteAppointment,
 } from "../services/appointmentService";
 import { getCustomers } from "../services/customerService";
-import { getEmployees } from "../services/employeeService";
 import { APPOINTMENT_STATUSES } from "../constants";
 import { cleanDataForFirestore } from "../utils";
+
+import { useDataStore } from '../stores/dataStore';
 
 const { Title } = Typography;
 const { Option } = Select;
@@ -41,7 +42,9 @@ const AppointmentPage = () => {
   const [isSaving, setIsSaving] = useState(false);
 
   const [customers, setCustomers] = useState([]);
-  const [employees, setEmployees] = useState([]);
+
+
+  const doctorsList = useDataStore((state) => state.doctors);
 
   const [selectedEventId, setSelectedEventId] = useState(null);
   const [initialDateTime, setInitialDateTime] = useState(null);
@@ -50,16 +53,10 @@ const AppointmentPage = () => {
   const loadInitialData = useCallback(async () => {
     setLoading(true);
     try {
-      const [appointmentsData, customersData, employeesData] =
-        await Promise.all([getAppointments(), getCustomers(), getEmployees()]);
+      const [appointmentsData, customersData] =
+        await Promise.all([getAppointments(), getCustomers()]);
       setEvents(appointmentsData);
       setCustomers(customersData);
-      setEmployees(
-        employeesData.filter(
-          (emp) =>
-            emp.title === "Bác sĩ" && emp.employmentStatus === "Đang làm việc"
-        )
-      );
     } catch (error) {
       toast.error("Lỗi khi tải dữ liệu!");
     } finally {
@@ -123,7 +120,7 @@ const AppointmentPage = () => {
       const selectedCustomer = customers.find(
         (c) => c.id === values.customerId
       );
-      const selectedDentist = employees.find((e) => e.id === values.dentistId);
+      const selectedDentist = doctorsList.find((e) => e.id === values.dentistId);
 
       const appointmentData = cleanDataForFirestore({
         ...values,
@@ -268,7 +265,7 @@ const AppointmentPage = () => {
                 option.children.toLowerCase().includes(input.toLowerCase())
               }
             >
-              {employees.map((emp) => (
+              {doctorsList.map((emp) => (
                 <Option key={emp.id} value={emp.id}>
                   {emp.fullName}
                 </Option>
