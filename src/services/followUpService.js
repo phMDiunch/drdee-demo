@@ -7,6 +7,7 @@ import {
   query,
   getDocs,
   orderBy,
+  where,
 } from "firebase/firestore";
 
 const followUpCollectionRef = collection(db, "followUpCalls");
@@ -24,4 +25,15 @@ export const addFollowUpCall = async (callData) => {
     ...callData,
     createdAt: Timestamp.now(),
   });
+};
+
+// Lấy toàn bộ lịch sử chăm sóc của 1 khách hàng
+export const getFollowUpCallsByCustomerId = async (customerId) => {
+  const q = query(
+    followUpCollectionRef,
+    where("customerId", "==", customerId),
+    orderBy("callDate", "desc") // Sắp xếp theo ngày gọi gần nhất
+  );
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
 };

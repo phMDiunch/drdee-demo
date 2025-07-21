@@ -9,12 +9,14 @@ import { useDataStore } from "../stores/dataStore";
 import ConsultedServices from "../components/ConsultedServices";
 import PaymentHistory from "../components/PaymentHistory";
 import SessionHistory from "../components/SessionHistory"; // Component mới
+import FollowUpHistory from "../components/FollowUpHistory";
 
 // Services
 import { getCustomerById } from "../services/customerService";
 import { getConsultedServicesByCustomerId } from "../services/consultedService";
 import { getPaymentsByCustomerId } from "../services/paymentService";
 import { getSessionsByCustomerId } from "../services/sessionService";
+import { getFollowUpCallsByCustomerId } from "../services/followUpService";
 
 const { Title } = Typography;
 
@@ -27,21 +29,29 @@ const CustomerDetailPage = () => {
   const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("1");
+  const [followUps, setFollowUps] = useState([]);
 
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [customerData, servicesData, paymentsData, sessionsData] =
-        await Promise.all([
-          getCustomerById(customerId),
-          getConsultedServicesByCustomerId(customerId),
-          getPaymentsByCustomerId(customerId),
-          getSessionsByCustomerId(customerId),
-        ]);
+      const [
+        customerData,
+        servicesData,
+        paymentsData,
+        sessionsData,
+        followUpsData,
+      ] = await Promise.all([
+        getCustomerById(customerId),
+        getConsultedServicesByCustomerId(customerId),
+        getPaymentsByCustomerId(customerId),
+        getSessionsByCustomerId(customerId),
+        getFollowUpCallsByCustomerId(customerId),
+      ]);
       setCustomer(customerData);
       setConsultedServices(servicesData);
       setPayments(paymentsData);
       setSessions(sessionsData);
+      setFollowUps(followUpsData);
     } catch (error) {
       toast.error("Lỗi khi tải dữ liệu.");
       console.error("Lỗi khi tải dữ liệu:", error);
@@ -92,6 +102,11 @@ const CustomerDetailPage = () => {
           reloadData={loadData}
         />
       ),
+    },
+    {
+      key: "4",
+      label: `Lịch sử Chăm sóc`,
+      children: <FollowUpHistory followUps={followUps} loading={loading} />,
     },
   ];
 
