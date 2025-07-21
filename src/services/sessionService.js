@@ -50,3 +50,17 @@ export const addOrUpdateSession = async (sessionData) => {
     { merge: true }
   );
 };
+
+export const getSessionsByDate = async (date) => {
+  const start = Timestamp.fromDate(dayjs(date).startOf("day").toDate());
+  const end = Timestamp.fromDate(dayjs(date).endOf("day").toDate());
+
+  const q = query(
+    collection(db, "sessions"),
+    where("sessionDate", ">=", start),
+    where("sessionDate", "<=", end)
+  );
+  const querySnapshot = await getDocs(q);
+  // Lấy thêm thông tin customerName từ session
+  return querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+};

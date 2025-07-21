@@ -32,6 +32,8 @@ const SessionHistory = ({
         ...cleanedValues,
         sessionDate: Timestamp.fromDate(cleanedValues.sessionDate.toDate()),
         customerId: customer.id,
+        customerName: customer.fullName,
+        customerCode: customer.customerCode,
       };
       console.log("Session data to save:", sessionData);
       await addOrUpdateSession(sessionData);

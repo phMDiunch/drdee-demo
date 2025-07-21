@@ -179,3 +179,18 @@ export const PAYMENT_STATUSES = [
   "Đã thanh toán",
   "Thanh toán một phần",
 ];
+
+// =================================================================
+// MODULE CHĂM SÓC KHÁCH HÀNG
+// =================================================================
+export const CALL_OUTCOMES = {
+  OK: "Bệnh nhân đã ổn",
+  FOLLOW_UP: "Cần chăm sóc thêm",
+  NO_CONTACT: "Không liên lạc được",
+};
+
+export const CALL_OUTCOME_COLORS = {
+  OK: "green",
+  FOLLOW_UP: "gold",
+  NO_CONTACT: "red",
+};
