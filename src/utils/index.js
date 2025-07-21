@@ -1,36 +1,42 @@
 /**
  * Dọn dẹp một đối tượng trước khi gửi lên Firestore.
- * Phiên bản này đã được nâng cấp để xử lý cả mảng services lồng nhau.
- * Chuyển đổi các giá trị `undefined` thành giá trị mặc định (chuỗi rỗng, số 0, hoặc mảng rỗng).
- * @param {object} data - Đối tượng dữ liệu đầu vào từ form.
- * @returns {object} - Đối tượng dữ liệu đã được làm sạch.
+ * Phiên bản này có thể dọn dẹp các giá trị `undefined` ở cả cấp đầu tiên
+ * và bên trong các mảng object lồng nhau (ví dụ: services, allocations, treatmentDetails).
  */
 export const cleanDataForFirestore = (data) => {
-  const cleanedData = {};
+  if (typeof data !== "object" || data === null) {
+    return data;
+  }
 
+  const cleanedData = {};
   for (const key in data) {
     if (Object.prototype.hasOwnProperty.call(data, key)) {
       const value = data[key];
 
-      // Xử lý mảng services lồng nhau
-      if (key === "services" && Array.isArray(value)) {
-        cleanedData[key] = value.map((serviceItem) => {
-          if (typeof serviceItem !== "object" || serviceItem === null) {
-            return serviceItem;
-          }
-          // Áp dụng logic dọn dẹp cho từng dịch vụ trong mảng
-          const cleanedServiceItem = {};
-          for (const serviceKey in serviceItem) {
-            const serviceValue = serviceItem[serviceKey];
-            cleanedServiceItem[serviceKey] =
-              serviceValue === undefined ? "" : serviceValue;
-          }
-          return cleanedServiceItem;
-        });
+      if (value === undefined) {
+        // Bỏ qua các trường undefined ở cấp đầu
+        continue;
       }
-      // Xử lý các trường thông thường
-      else {
-        cleanedData[key] = value === undefined ? "" : value;
+
+      if (Array.isArray(value)) {
+        cleanedData[key] = value.map((item) => {
+          if (
+            typeof item === "object" &&
+            item !== null &&
+            !Array.isArray(item)
+          ) {
+            const cleanedItem = {};
+            for (const itemKey in item) {
+              const itemValue = item[itemKey];
+              // Gán giá trị rỗng '' cho các trường undefined trong object của mảng
+              cleanedItem[itemKey] = itemValue === undefined ? "" : itemValue;
+            }
+            return cleanedItem;
+          }
+          return item;
+        });
+      } else {
+        cleanedData[key] = value;
       }
     }
   }
